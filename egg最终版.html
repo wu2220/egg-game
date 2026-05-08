@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>嘎达嘎达，冲吧蛋仔！</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; background: linear-gradient(to bottom, #0a0a2a, #1a1a3a);
+            font-family: 'Arial', sans-serif; color: white; overflow: auto;
+        }
+        .game-container {
+            position: relative; width: 960px; height: 540px;
+            border: 3px solid #4a4aff; border-radius: 10px; overflow: hidden;
+            box-shadow: 0 0 30px rgba(74, 74, 255, 0.3);
+        }
+        .game-background-wrapper { position: absolute; top: 0; left: 0; width: 200%; height: 100%; z-index: 1; }
+        .game-background {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover; background-position: center; background-repeat: no-repeat; z-index: 1;
+        }
+        .game-screen { position: relative; width: 100%; height: 100%; }
+        .game-info {
+            position: absolute; top: 10px; left: 10px; z-index: 10;
+            background: rgba(0, 0, 0, 0.7); padding: 8px 15px; border-radius: 5px; border: 1px solid #4a4aff;
+        }
+        .score { font-size: 20px; font-weight: bold; color: #4aff4a; }
+        .player {
+            position: absolute; width: 50px; height: 50px; border-radius: 50%;
+            left: 120px; z-index: 5; box-shadow: 0 0 20px #4a4aff;
+            transition: opacity 0.5s, transform 0.3s;
+        }
+        .obstacle { position: absolute; border-radius: 5px; z-index: 3; }
+        .type1-obstacle { border: 2px solid #ff4a4a; box-shadow: 0 0 10px #ff4a4a; }
+        .type2-obstacle { border: 2px dashed #4a4aff; box-shadow: 0 0 10px #4a4aff; }
+        .powerup {
+            position: absolute; width: 30px; height: 30px; border-radius: 50%;
+            z-index: 4; display: flex; justify-content: center; align-items: center;
+            font-weight: bold; font-size: 18px; animation: float 2s infinite ease-in-out;
+        }
+        .invincible-powerup { background: linear-gradient(45deg, #ffd700, #ff8c00); border: 2px solid #ffd700; box-shadow: 0 0 15px #ffd700; color: #000; }
+        .grow-powerup { background: linear-gradient(45deg, #4aff4a, #00ff00); border: 2px solid #4aff4a; box-shadow: 0 0 15px #4aff4a; color: #000; }
+        .golden-glow {
+            position: absolute; width: 60px; height: 60px; border-radius: 50%;
+            border: 3px solid #ffd700; box-shadow: 0 0 30px #ffd700;
+            top: -5px; left: -5px; animation: pulse 1s infinite; pointer-events: none; z-index: 6;
+        }
+        .invincible-effect {
+            position: absolute; width: 60px; height: 60px; border-radius: 50%;
+            border: 3px solid #ff4a4a; box-shadow: 0 0 20px #ff4a4a;
+            top: -5px; left: -5px; animation: pulse 0.5s infinite; pointer-events: none; z-index: 6;
+        }
+        .grow-effect {
+            position: absolute; width: 80px; height: 80px; border-radius: 50%;
+            border: 3px solid #4aff4a; box-shadow: 0 0 20px #4aff4a;
+            top: -15px; left: -15px; animation: pulse 0.8s infinite; pointer-events: none; z-index: 6;
+        }
+        .ground {
+            position: absolute; width: 100%; height: 25px; bottom: 0; z-index: 4;
+            background: linear-gradient(to right, #2a2a5a, #3a3a7a); border-top: 2px solid #4a4aff;
+        }
+        .ceiling {
+            position: absolute; width: 100%; height: 25px; top: 0; z-index: 4;
+            background: linear-gradient(to right, #2a2a5a, #3a3a7a); border-bottom: 2px solid #4a4aff;
+        }
+        .start-screen, .game-over-screen, .history-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: rgba(0, 0, 0, 0.85); z-index: 20;
+        }
+        .history-screen { display: none; }
+        .title {
+            font-size: 48px; font-weight: bold; margin-bottom: 20px;
+            background: linear-gradient(45deg, #ff4a4a, #ff9900);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            text-shadow: 0 0 10px rgba(255, 74, 74, 0.5);
+        }
+        .final-score { font-size: 36px; color: #4aff4a; margin: 20px 0; text-shadow: 0 0 10px #4aff4a; }
+        .record-msg {
+            font-size: 24px; color: #ffd700; margin: 10px 0; text-shadow: 0 0 15px #ffd700;
+            display: none;
+        }
+        .revive-button, .history-button, .back-button {
+            background: linear-gradient(to bottom, #4aff4a, #00aa00); color: white;
+            border: none; padding: 12px 24px; border-radius: 8px; font-size: 18px;
+            cursor: pointer; margin-top: 10px; box-shadow: 0 0 10px #4aff4a;
+        }
+        .revive-button:hover, .history-button:hover, .back-button:hover { background: linear-gradient(to bottom, #00ff00, #008800); }
+        .revive-button:active, .history-button:active, .back-button:active { transform: scale(0.95); }
+        .skin-selector { margin: 20px 0; text-align: center; width: 100%; }
+        .skin-selector-title { font-size: 20px; color: #4aff4a; margin-bottom: 15px; text-shadow: 0 0 5px #4aff4a; }
+        .skin-options { display: flex; justify-content: center; gap: 20px; margin-top: 10px; }
+        .skin-option {
+            width: 60px; height: 60px; border-radius: 50%; cursor: pointer;
+            border: 3px solid transparent; transition: all 0.3s ease; overflow: hidden; position: relative;
+        }
+        .skin-option:hover { transform: scale(1.1); box-shadow: 0 0 15px rgba(74, 74, 255, 0.7); }
+        .skin-option.selected { border: 3px solid #4aff4a; box-shadow: 0 0 20px #4aff4a; transform: scale(1.1); }
+        .skin-preview { width: 100%; height: 100%; border-radius: 50%; background-size: cover; background-position: center; }
+        .skin-name { font-size: 12px; color: #ccccff; margin-top: 5px; text-align: center; }
+        .start-button {
+            background: linear-gradient(to bottom, #ff4a4a, #ff9900); color: white;
+            border: none; padding: 12px 30px; border-radius: 8px; font-size: 20px;
+            cursor: pointer; margin-top: 20px; box-shadow: 0 0 15px #ff4a4a; transition: all 0.3s ease;
+        }
+        .start-button:hover { background: linear-gradient(to bottom, #ff9900, #ff4a4a); transform: scale(1.05); }
+        .start-button:active { transform: scale(0.95); }
+        .game-controls { margin-top: 20px; text-align: center; font-size: 16px; color: #ccccff; line-height: 1.5; }
+        .powerup-info {
+            position: absolute; top: 10px; right: 10px; z-index: 10;
+            background: rgba(0, 0, 0, 0.7); padding: 8px 15px; border-radius: 5px;
+            border: 1px solid #ffd700; font-size: 16px; color: #ffd700;
+        }
+        .grow-info {
+            position: absolute; top: 50px; right: 10px; z-index: 10;
+            background: rgba(0, 0, 0, 0.7); padding: 8px 15px; border-radius: 5px;
+            border: 1px solid #4aff4a; font-size: 16px; color: #4aff4a;
+        }
+        .history-list {
+            width: 80%; max-height: 300px; overflow-y: auto; margin: 10px 0;
+            background: rgba(0,0,0,0.6); border-radius: 10px; padding: 10px;
+            text-align: left;
+        }
+        .history-item {
+            padding: 8px; border-bottom: 1px solid #4aff4a; color: #ccc; font-size: 14px;
+            display: flex; flex-wrap: wrap; justify-content: space-between;
+        }
+        .history-item:last-child { border-bottom: none; }
+        .history-score { color: #4aff4a; font-weight: bold; width: 60px; }
+        .history-comment { color: #ffd700; font-size: 13px; width: 100%; margin-top: 4px; }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+        @keyframes flash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-background-wrapper" id="gameBackgroundWrapper"></div>
+        <div class="game-screen" id="gameScreen">
+            <div class="game-info">
+                <div class="score">得分: <span id="score">0</span></div>
+                <div class="score" style="font-size: 16px; margin-top: 5px;">阶段: <span id="stage">1</span></div>
+            </div>
+            <div class="powerup-info" id="powerupInfo" style="display: none;">金色光芒</div>
+            <div class="grow-info" id="growInfo" style="display: none;">变大状态</div>
+            <div class="player" id="player"></div>
+            <div class="ceiling"></div>
+            <div class="ground"></div>
+
+            <!-- 开始画面 -->
+            <div class="start-screen" id="startScreen">
+                <h1 class="title">嘎达嘎达，冲吧蛋仔！</h1>
+                <div class="skin-selector">
+                    <div class="skin-selector-title">选择你的蛋仔皮肤</div>
+                    <div class="skin-options" id="skinOptions"></div>
+                </div>
+                <button class="start-button" id="startButton">开始游戏 (空格键)</button>
+                <button class="history-button" id="historyButton">📜 历史记录</button>
+                <div class="game-controls">
+                    <div>游戏控制:</div>
+                    <div>空格键 - 跳跃/开始游戏</div>
+                    <div>R键 - 重新开始（并记录本局数据）</div>
+                    <div>F键 - 原地复活</div>
+                    <div>吃到金色星星获得3秒金色光芒</div>
+                    <div>金色光芒期间撞到障碍物触发1秒无敌</div>
+                    <div>吃到绿色星星获得5秒变大效果</div>
+                    <div>后期大间隙会出现弹出障碍物！</div>
+                </div>
+            </div>
+
+            <!-- 游戏结束画面 -->
+            <div class="game-over-screen" id="gameOverScreen" style="display: none;">
+                <h1 class="title">游戏结束</h1>
+                <div class="final-score">得分: <span id="finalScore">0</span></div>
+                <div class="record-msg" id="recordMsg">恭喜你！又打破记录啦！你是最棒的小蛋仔！请继续努力吧~</div>
+                <div class="score" style="font-size: 20px; margin: 10px 0;">最高阶段: <span id="finalStage">1</span></div>
+                <div class="score" style="font-size: 18px; margin: 10px 0; color: #ffd700;">收集无敌包: <span id="powerupsCollected">0</span> 个</div>
+                <div class="score" style="font-size: 18px; margin: 10px 0; color: #4aff4a;">收集变大包: <span id="growPowerupsCollected">0</span> 个</div>
+                <div class="score" style="font-size: 18px; margin: 10px 0; color: #ff9900;">本局复活次数: <span id="reviveCountDisplay">0</span></div>
+                <button class="revive-button" id="reviveButton">原地复活(按F键)</button>
+                <div class="score" style="font-size: 18px; margin-top: 10px;">按R键记录本局并重新开始</div>
+            </div>
+
+            <!-- 历史记录画面 -->
+            <div class="history-screen" id="historyScreen">
+                <h2 style="color:#4aff4a; margin-bottom:20px;">📜 历史记录</h2>
+                <div class="history-list" id="historyList"></div>
+                <button class="back-button" id="backButton">返回</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 游戏常量
+        const GAME_WIDTH = 960;
+        const GAME_HEIGHT = 540;
+        const GROUND_HEIGHT = 25;
+        const CEILING_HEIGHT = 25;
+        const PLAYER_SIZE = 50;
+        const PLAYER_X = 120;
+        const PLAYER_BALL_SIZE = 50;
+        const TOTAL_STAGES = 5;
+        const SCORE_PER_STAGE = 20;
+        const MAX_SCORE = TOTAL_STAGES * SCORE_PER_STAGE;
+
+        const NEW_GRAVITY = 0.03;
+        const NEW_JUMP_FORCE = -2.2;
+
+        const UNIFIED_BACKGROUND_IMAGE = "https://static.tcamp.qq.com/gallery/prod/2026/5/3/83e7c2fad2e21760/48099d44-0246-47d4-adec-59c9a1be2278.jpg";
+        const PLAYER_GROUND_Y = GAME_HEIGHT - GROUND_HEIGHT - PLAYER_SIZE;
+
+        const SKINS = [
+            { id: 'original', name: '蛋仔原皮', type: 'image', url: 'https://static.tcamp.qq.com/gallery/prod/2026/5/3/83e7c2fad2e21760/c9b4fc14-6688-47fa-b3d0-4742424cf408.jpg', shadow: '#ff4a4a' },
+            { id: 'skin1', name: '炫彩蛋仔', type: 'image', url: 'https://static.tcamp.qq.com/gallery/prod/2026/5/3/83e7c2fad2e21760/014cdf26-2417-419b-af0d-f1e385eae8eb.jpg', shadow: '#ff00ff' },
+            { id: 'skin2', name: '火焰蛋仔', type: 'image', url: 'https://static.tcamp.qq.com/gallery/prod/2026/5/3/83e7c2fad2e21760/6ed1a36b-a60e-4b7c-98ec-1c0637adae8f.jpg', shadow: '#ff4a4a' },
+            { id: 'skin3', name: '星辰蛋仔', type: 'image', url: 'https://static.tcamp.qq.com/gallery/prod/2026/5/3/83e7c2fad2e21760/dc5150ba-9027-45db-8445-240a199f285e.jpg', shadow: '#00ffff' },
+            { id: 'skin4', name: '翡翠蛋仔', type: 'image', url: 'https://static.tcamp.qq.com/gallery/prod/2026/5/3/83e7c2fad2e21760/01b2667a-9e5c-4363-bdfb-aa46ccd84ee3.jpg', shadow: '#4aff4a' }
+        ];
+
+        const OBSTACLE_TYPES = [
+            { colors: ["#ff4a4a", "#ff9900"], shape: "rectangle" },
+            { colors: ["#4a4aff", "#00aaff"], shape: "rectangle" },
+            { colors: ["#4aff4a", "#aaff4a"], shape: "rectangle" },
+            { colors: ["#aa4aff", "#ff4aff"], shape: "triangle" },
+            { colors: ["#ffaa4a", "#ffcc4a"], shape: "circle" },
+            { colors: ["#4affff", "#4affaa"], shape: "hexagon" }
+        ];
+
+        const OBSTACLE_LAYOUTS = { TOP_PASSABLE: 0, BOTTOM_PASSABLE: 1, MIDDLE_PASSABLE: 2 };
+        const OBSTACLE_SPEED_TYPES = { TYPE1: 1, TYPE2: 2 };
+        const TYPE1_SPEED_MULTIPLIER = 1.0;
+        const TYPE2_SPEED_MULTIPLIER = 1.0;
+
+        const gameState = {
+            isPlaying: false, isGameOver: false, isPaused: false,
+            score: 0, playerY: PLAYER_GROUND_Y, playerVelocity: 0,
+            gravity: NEW_GRAVITY, jumpForce: NEW_JUMP_FORCE,
+            obstacles: [], powerups: [], lastObstaclePairTime: 0,
+            obstacleTypes: { topPassable: 0, bottomPassable: 0, middlePassable: 0, type1: 0, type2: 0 },
+            isSpacePressed: false, isFKeyPressed: false,
+            deathCount: 0, isReviving: false, reviveCount: 0,
+            isInvincible: false, invincibleTimer: 0,
+            GOLDEN_GLOW_DURATION: 3000, INVINCIBLE_FLASH_DURATION: 1000,
+            hasGoldenGlow: false, goldenGlowTimer: 0, goldenGlowElement: null,
+            invincibleFlashElement: null,
+            isBig: false, bigTimer: 0, GROW_DURATION: 5000,
+            BIG_SIZE_MULTIPLIER: 1.5, growEffectElement: null,
+            lastPowerupTime: 0, POWERUP_SPAWN_INTERVAL: 6000,
+            invinciblePowerupsCollected: 0, growPowerupsCollected: 0,
+            currentStage: 1, maxStageReached: 1,
+            obstacleCount: 0, maxObstaclesOnScreen: 20,
+            baseGameSpeed: 2.0, currentGameSpeed: 2.0,
+            currentObstacleInterval: 1200, minObstacleInterval: 500, maxObstacleInterval: 1500,
+            currentObstacleSpacing: 250, minObstacleSpacing: 180, maxObstacleSpacing: 350,
+            wavePhase: 0, waveAmplitude: 0.5, waveFrequency: 0.01,
+            progress: 0, backgroundPosition: 0, backgroundWrapper: null,
+            isBackgroundInitialized: false, lastObstacleLayout: null,
+            lastUpdateTime: 0, speedIncreasePerSecond: 0.04,
+            stage1BaseHeight: 60, stage1BaseInterval: 1200, stage1BaseSpacing: 250,
+            hardObstacleCount: 0, maxHardObstaclesInRow: 1, lastHardObstacleX: -1000,
+            minDistanceBetweenHardObstacles: 600,
+            hardObstacleBaseProbability: 0.05, hardObstacleProbabilityIncrease: 0.05,
+            stage2PlusSpeedIncrease: 0.045, stage2PlusObstacleDensity: 1.3, stage2PlusHeightIncrease: 1.08,
+            currentSkin: 'original', skins: SKINS,
+            safeJumpZoneWidth: 200, lastObstacleX: 0, obstaclePositions: [],
+            EJECT_THRESHOLD_GAP: PLAYER_BALL_SIZE * 5,
+            EJECT_DURATION: 500,
+            EJECT_MIN_STAGE: 3,
+            bestScore: 0,
+            historyRecords: []
+        };
+
+        // DOM 元素
+        const player = document.getElementById('player');
+        const scoreElement = document.getElementById('score');
+        const stageElement = document.getElementById('stage');
+        const finalScoreElement = document.getElementById('finalScore');
+        const finalStageElement = document.getElementById('finalStage');
+        const powerupInfoElement = document.getElementById('powerupInfo');
+        const growInfoElement = document.getElementById('growInfo');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const historyScreen = document.getElementById('historyScreen');
+        const reviveButton = document.getElementById('reviveButton');
+        const startButton = document.getElementById('startButton');
+        const historyButton = document.getElementById('historyButton');
+        const backButton = document.getElementById('backButton');
+        const gameScreen = document.getElementById('gameScreen');
+        const gameBackgroundWrapper = document.getElementById('gameBackgroundWrapper');
+        const skinOptionsContainer = document.getElementById('skinOptions');
+        const powerupsCollectedElement = document.getElementById('powerupsCollected');
+        const growPowerupsCollectedElement = document.getElementById('growPowerupsCollected');
+        const recordMsgElement = document.getElementById('recordMsg');
+        const historyListElement = document.getElementById('historyList');
+        const reviveCountDisplay = document.getElementById('reviveCountDisplay');
+
+        // ===================== 历史记录功能（整局记录） =====================
+        function loadHistoryData() {
+            try {
+                const storedBest = localStorage.getItem('eggRunner_bestScore');
+                gameState.bestScore = storedBest ? parseInt(storedBest, 10) : 0;
+                const storedHistory = localStorage.getItem('eggRunner_history');
+                gameState.historyRecords = storedHistory ? JSON.parse(storedHistory) : [];
+            } catch (e) {
+                gameState.bestScore = 0;
+                gameState.historyRecords = [];
+            }
+        }
+
+        function saveHistoryData() {
+            localStorage.setItem('eggRunner_bestScore', gameState.bestScore.toString());
+            localStorage.setItem('eggRunner_history', JSON.stringify(gameState.historyRecords));
+        }
+
+        function addHistoryRecord(score, reviveCount, invincible, grow) {
+            gameState.historyRecords.push({
+                score,
+                reviveCount,
+                invincible,
+                grow,
+                date: new Date().toLocaleString()
+            });
+            if (gameState.historyRecords.length > 30) {
+                gameState.historyRecords.shift();
+            }
+            saveHistoryData();
+        }
+
+        function recordCurrentGameSession() {
+            // 只有玩过一局（得分>0 或 复活次数>0）才记录
+            if (gameState.score > 0 || gameState.reviveCount > 0 || gameState.invinciblePowerupsCollected > 0 || gameState.growPowerupsCollected > 0) {
+                // 检查并更新最高分
+                if (gameState.score > gameState.bestScore) {
+                    gameState.bestScore = gameState.score;
+                }
+                addHistoryRecord(
+                    gameState.score,
+                    gameState.reviveCount,
+                    gameState.invinciblePowerupsCollected,
+                    gameState.growPowerupsCollected
+                );
+            }
+        }
+
+        function getReviveComment(reviveCount) {
+            if (reviveCount === 0) return "太棒啦！看广告复活对你没用呢~";
+            if (reviveCount <= 5) return "不再依赖科技算长大吗~";
+            return "啊哦，这局有点小逆风哦~";
+        }
+
+        function showHistoryPanel() {
+            historyListElement.innerHTML = '';
+            if (gameState.historyRecords.length === 0) {
+                historyListElement.innerHTML = '<div style="color:#aaa; text-align:center; padding:20px;">暂无历史记录</div>';
+            } else {
+                gameState.historyRecords.slice().reverse().forEach(record => {
+                    const item = document.createElement('div');
+                    item.className = 'history-item';
+                    item.innerHTML = `
+                        <span class="history-score">${record.score}分</span>
+                        <span>复活: ${record.reviveCount}次</span>
+                        <span>⭐${record.invincible}</span>
+                        <span>🟢${record.grow}</span>
+                        <span style="color:#aaa; font-size:12px;">${record.date || ''}</span>
+                        <div class="history-comment">${getReviveComment(record.reviveCount)}</div>
+                    `;
+                    historyListElement.appendChild(item);
+                });
+            }
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            historyScreen.style.display = 'flex';
+        }
+
+        function hideHistoryPanel() {
+            historyScreen.style.display = 'none';
+            startScreen.style.display = 'flex';
+        }
+
+        // ===================== 皮肤相关 =====================
+        function initSkinSelector() {
+            skinOptionsContainer.innerHTML = '';
+            gameState.skins.forEach(skin => {
+                const skinOption = document.createElement('div');
+                skinOption.className = 'skin-option';
+                skinOption.dataset.skinId = skin.id;
+                if (skin.id === gameState.currentSkin) skinOption.classList.add('selected');
+                const skinPreview = document.createElement('div');
+                skinPreview.className = 'skin-preview';
+                if (skin.type === 'gradient') {
+                    skinPreview.style.background = `linear-gradient(45deg, ${skin.colors[0]}, ${skin.colors[1]})`;
+                } else if (skin.type === 'image') {
+                    skinPreview.style.backgroundImage = `url('${skin.url}')`;
+                }
+                const skinName = document.createElement('div');
+                skinName.className = 'skin-name';
+                skinName.textContent = skin.name;
+                skinOption.appendChild(skinPreview);
+                skinOption.appendChild(skinName);
+                skinOption.addEventListener('click', () => selectSkin(skin.id));
+                skinOptionsContainer.appendChild(skinOption);
+            });
+        }
+
+        function selectSkin(skinId) {
+            document.querySelectorAll('.skin-option').forEach(o => o.classList.remove('selected'));
+            const selected = document.querySelector(`.skin-option[data-skin-id="${skinId}"]`);
+            if (selected) selected.classList.add('selected');
+            gameState.currentSkin = skinId;
+            localStorage.setItem('eggRunner_selectedSkin', skinId);
+            applySkinToPlayer();
+        }
+
+        function applySkinToPlayer() {
+            const skin = gameState.skins.find(s => s.id === gameState.currentSkin) || gameState.skins.find(s => s.id === 'original');
+            if (!skin) return;
+            if (skin.type === 'gradient') {
+                player.style.background = `linear-gradient(45deg, ${skin.colors[0]}, ${skin.colors[1]})`;
+                player.style.backgroundImage = 'none';
+            } else {
+                player.style.background = 'transparent';
+                player.style.backgroundImage = `url('${skin.url}')`;
+                player.style.backgroundSize = 'cover';
+                player.style.backgroundPosition = 'center';
+            }
+            if (gameState.isGameOver) {
+                player.style.background = 'linear-gradient(45deg, #ff4a4a, #ff9900)';
+                player.style.boxShadow = '0 0 25px #ff4a4a';
+                player.style.backgroundImage = 'none';
+                return;
+            }
+            if (gameState.hasGoldenGlow) player.style.boxShadow = '0 0 30px #ffd700';
+            else if (gameState.isInvincible) player.style.boxShadow = '0 0 25px #ff4a4a';
+            else if (gameState.isBig) player.style.boxShadow = '0 0 25px #4aff4a';
+            else player.style.boxShadow = `0 0 20px ${skin.shadow}`;
+        }
+
+        function loadSkinFromStorage() {
+            const saved = localStorage.getItem('eggRunner_selectedSkin');
+            gameState.currentSkin = (saved && gameState.skins.some(s => s.id === saved)) ? saved : 'original';
+        }
+
+        // ===================== 背景 =====================
+        function preloadBackgroundImage() {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = resolve;
+                img.onerror = resolve;
+                img.src = UNIFIED_BACKGROUND_IMAGE;
+            });
+        }
+
+        function initializeBackground() {
+            if (gameState.isBackgroundInitialized) return;
+            gameBackgroundWrapper.innerHTML = '';
+            for (let i = 0; i < 2; i++) {
+                const bg = document.createElement('div');
+                bg.className = 'game-background';
+                bg.style.left = `${i * GAME_WIDTH}px`;
+                gameBackgroundWrapper.appendChild(bg);
+            }
+            setBackground();
+            gameState.backgroundWrapper = gameBackgroundWrapper;
+            gameState.isBackgroundInitialized = true;
+        }
+
+        function setBackground() {
+            document.querySelectorAll('.game-background').forEach((bg, i) => {
+                bg.style.left = `${i * GAME_WIDTH}px`;
+                bg.style.backgroundImage = `url('${UNIFIED_BACKGROUND_IMAGE}')`;
+                bg.style.backgroundColor = 'transparent';
+            });
+            gameState.backgroundPosition = 0;
+            if (gameState.backgroundWrapper) gameState.backgroundWrapper.style.left = '0px';
+        }
+
+        function getBackgroundSpeed() { return gameState.currentGameSpeed * 0.3; }
+        function getType1Speed() { return getBackgroundSpeed() * TYPE1_SPEED_MULTIPLIER; }
+        function getType2Speed() { return getBackgroundSpeed() * TYPE2_SPEED_MULTIPLIER; }
+
+        function updateBackground() {
+            if (!gameState.isPlaying || gameState.isGameOver || gameState.isPaused) return;
+            gameState.backgroundPosition -= getBackgroundSpeed();
+            if (gameState.backgroundPosition <= -GAME_WIDTH) gameState.backgroundPosition += GAME_WIDTH;
+            if (gameState.backgroundWrapper) gameState.backgroundWrapper.style.left = `${gameState.backgroundPosition}px`;
+        }
+
+        function getObstacleSpacingByStage(stage) {
+            if (stage === 1) return gameState.stage1BaseSpacing;
+            return Math.max(150, Math.round(gameState.stage1BaseSpacing / Math.pow(gameState.stage2PlusObstacleDensity, stage - 1)));
+        }
+
+        function getObstacleIntervalByStage(stage) {
+            if (stage === 1) return gameState.stage1BaseInterval;
+            return Math.max(400, Math.round(gameState.stage1BaseInterval / Math.pow(gameState.stage2PlusObstacleDensity, stage - 1)));
+        }
+
+        function getObstacleBaseHeightByStage(stage) {
+            if (stage === 1) return gameState.stage1BaseHeight;
+            return Math.round(gameState.stage1BaseHeight * Math.pow(gameState.stage2PlusHeightIncrease, stage - 1));
+        }
+
+        function getWaveValue() { return Math.sin(gameState.wavePhase) * gameState.waveAmplitude; }
+
+        function isPositionSafe(x, layout, isHardObstacle) {
+            if (!gameState.obstaclePositions.length) return true;
+            const last = gameState.obstaclePositions[gameState.obstaclePositions.length - 1];
+            const spacing = getObstacleSpacingByStage(gameState.currentStage);
+            if (x - last.x < spacing * 0.6) return false;
+            if (isHardObstacle && x - last.x < spacing * 0.8) return false;
+            const safeStart = last.x - gameState.safeJumpZoneWidth;
+            const safeEnd = last.x + last.width + gameState.safeJumpZoneWidth;
+            return !(x >= safeStart && x <= safeEnd);
+        }
+
+        // ===================== 道具生成 =====================
+        function spawnPowerup() {
+            if (gameState.isGameOver || gameState.isPaused) return;
+            if (Date.now() - gameState.lastPowerupTime < gameState.POWERUP_SPAWN_INTERVAL) return;
+            let type = Math.random() < 0.5 ? 'invincible' : 'grow';
+            if (gameState.hasGoldenGlow && type === 'invincible') return;
+            const safeY = CEILING_HEIGHT + 50 + Math.random() * (PLAYER_GROUND_Y - CEILING_HEIGHT - 100);
+            const px = GAME_WIDTH;
+            if (gameState.obstacles.some(obs => {
+                const pr = px + 30, pl = px, pt = safeY, pb = safeY + 30;
+                const or = obs.x + obs.width, ol = obs.x, ot = obs.y, ob = obs.y + obs.height;
+                return pl < or && pr > ol && pt < ob && pb > ot;
+            })) return;
+            const el = document.createElement('div');
+            el.className = 'powerup ' + (type === 'invincible' ? 'invincible-powerup' : 'grow-powerup');
+            el.textContent = type === 'invincible' ? '★' : '▲';
+            el.style.left = `${px}px`;
+            el.style.top = `${safeY}px`;
+            gameScreen.appendChild(el);
+            gameState.powerups.push({ element: el, x: px, y: safeY, width: 30, height: 30, type });
+            gameState.lastPowerupTime = Date.now();
+        }
+
+        function updatePowerups() {
+            for (let i = gameState.powerups.length - 1; i >= 0; i--) {
+                const p = gameState.powerups[i];
+                p.x -= getBackgroundSpeed() * 0.8;
+                p.element.style.left = `${p.x}px`;
+                if (checkPowerupCollision(p)) collectPowerup(p, i);
+                else if (p.x + p.width < 0) {
+                    p.element.remove();
+                    gameState.powerups.splice(i, 1);
+                }
+            }
+        }
+
+        function checkPowerupCollision(p) {
+            const size = gameState.isBig ? PLAYER_SIZE * gameState.BIG_SIZE_MULTIPLIER : PLAYER_SIZE;
+            const pl = PLAYER_X, pr = PLAYER_X + size, pt = gameState.playerY, pb = gameState.playerY + size;
+            return (pr > p.x && pl < p.x + p.width && pb > p.y && pt < p.y + p.height);
+        }
+
+        function collectPowerup(p, idx) {
+            p.element.remove();
+            gameState.powerups.splice(idx, 1);
+            if (p.type === 'invincible') { activateGoldenGlow(); gameState.invinciblePowerupsCollected++; }
+            else { activateGrow(); gameState.growPowerupsCollected++; }
+        }
+
+        // ===================== 特效（动态居中） =====================
+        function addGoldenGlowEffect() {
+            removeGoldenGlowEffect();
+            const el = document.createElement('div');
+            el.className = 'golden-glow';
+            const pw = player.clientWidth, gs = 60, offset = -(gs - pw) / 2;
+            el.style.top = el.style.left = `${offset}px`;
+            player.appendChild(el);
+            gameState.goldenGlowElement = el;
+        }
+
+        function removeGoldenGlowEffect() {
+            if (gameState.goldenGlowElement) { gameState.goldenGlowElement.remove(); gameState.goldenGlowElement = null; }
+        }
+
+        function addInvincibleFlashEffect() {
+            removeInvincibleFlashEffect();
+            const el = document.createElement('div');
+            el.className = 'invincible-effect';
+            const pw = player.clientWidth, gs = 60, offset = -(gs - pw) / 2;
+            el.style.top = el.style.left = `${offset}px`;
+            player.appendChild(el);
+            gameState.invincibleFlashElement = el;
+        }
+
+        function removeInvincibleFlashEffect() {
+            if (gameState.invincibleFlashElement) { gameState.invincibleFlashElement.remove(); gameState.invincibleFlashElement = null; }
+        }
+
+        function addGrowEffect() {
+            removeGrowEffect();
+            const el = document.createElement('div');
+            el.className = 'grow-effect';
+            const pw = player.clientWidth, gs = 80, offset = -(gs - pw) / 2;
+            el.style.top = el.style.left = `${offset}px`;
+            player.appendChild(el);
+            gameState.growEffectElement = el;
+        }
+
+        function removeGrowEffect() {
+            if (gameState.growEffectElement) { gameState.growEffectElement.remove(); gameState.growEffectElement = null; }
+        }
+
+        function repositionAllEffects() {
+            const pw = player.clientWidth;
+            if (gameState.goldenGlowElement) {
+                const off = -(60 - pw) / 2;
+                gameState.goldenGlowElement.style.top = gameState.goldenGlowElement.style.left = `${off}px`;
+            }
+            if (gameState.invincibleFlashElement) {
+                const off = -(60 - pw) / 2;
+                gameState.invincibleFlashElement.style.top = gameState.invincibleFlashElement.style.left = `${off}px`;
+            }
+            if (gameState.growEffectElement) {
+                const off = -(80 - pw) / 2;
+                gameState.growEffectElement.style.top = gameState.growEffectElement.style.left = `${off}px`;
+            }
+        }
+
+        function activateGoldenGlow() {
+            if (gameState.hasGoldenGlow) return;
+            gameState.hasGoldenGlow = true;
+            gameState.goldenGlowTimer = Date.now();
+            player.style.boxShadow = '0 0 30px #ffd700';
+            addGoldenGlowEffect();
+            powerupInfoElement.style.display = 'block';
+            powerupInfoElement.textContent = '金色光芒';
+        }
+
+        function removeGoldenGlow() {
+            gameState.hasGoldenGlow = false;
+            applySkinToPlayer();
+            removeGoldenGlowEffect();
+            powerupInfoElement.style.display = 'none';
+        }
+
+        function activateInvincibleFlash() {
+            if (gameState.isInvincible) return;
+            gameState.isInvincible = true;
+            gameState.invincibleTimer = Date.now();
+            removeGoldenGlow();
+            player.style.boxShadow = '0 0 25px #ff4a4a';
+            player.style.animation = 'flash 0.5s infinite';
+            addInvincibleFlashEffect();
+            powerupInfoElement.style.display = 'block';
+            powerupInfoElement.textContent = '无敌状态';
+        }
+
+        function removeInvincibleFlash() {
+            gameState.isInvincible = false;
+            player.style.animation = '';
+            applySkinToPlayer();
+            removeInvincibleFlashEffect();
+            powerupInfoElement.style.display = 'none';
+        }
+
+        function activateGrow() {
+            if (gameState.isBig) {
+                gameState.bigTimer = Date.now();
+                return;
+            }
+            gameState.isBig = true;
+            gameState.bigTimer = Date.now();
+            const newSize = PLAYER_SIZE * gameState.BIG_SIZE_MULTIPLIER;
+            player.style.width = `${newSize}px`;
+            player.style.height = `${newSize}px`;
+            player.style.left = `${PLAYER_X - (newSize - PLAYER_SIZE) / 2}px`;
+            player.style.boxShadow = '0 0 25px #4aff4a';
+            addGrowEffect();
+            growInfoElement.style.display = 'block';
+            growInfoElement.textContent = '变大状态';
+        }
+
+        function removeGrow() {
+            gameState.isBig = false;
+            player.style.width = `${PLAYER_SIZE}px`;
+            player.style.height = `${PLAYER_SIZE}px`;
+            player.style.left = `${PLAYER_X}px`;
+            applySkinToPlayer();
+            removeGrowEffect();
+            growInfoElement.style.display = 'none';
+            repositionAllEffects();
+        }
+
+        function updatePowerupStates() {
+            const now = Date.now();
+            if (gameState.hasGoldenGlow) {
+                const left = gameState.GOLDEN_GLOW_DURATION - (now - gameState.goldenGlowTimer);
+                if (left <= 0) removeGoldenGlow();
+                else powerupInfoElement.textContent = `金色光芒 (${Math.ceil(left / 1000)}秒)`;
+            }
+            if (gameState.isInvincible) {
+                const left = gameState.INVINCIBLE_FLASH_DURATION - (now - gameState.invincibleTimer);
+                if (left <= 0) removeInvincibleFlash();
+                else powerupInfoElement.textContent = `无敌状态 (${Math.ceil(left / 1000)}秒)`;
+            }
+            if (gameState.isBig) {
+                const left = gameState.GROW_DURATION - (now - gameState.bigTimer);
+                if (left <= 0) removeGrow();
+                else growInfoElement.textContent = `变大状态 (${Math.ceil(left / 1000)}秒)`;
+            }
+        }
+
+        // ===================== 碰撞 =====================
+        function checkCollision(obstacle) {
+            if (gameState.isInvincible) return false;
+            const size = gameState.isBig ? PLAYER_SIZE * gameState.BIG_SIZE_MULTIPLIER : PLAYER_SIZE;
+            const pl = PLAYER_X, pr = PLAYER_X + size, pt = gameState.playerY, pb = gameState.playerY + size;
+            if (pr < obstacle.x || pl > obstacle.x + obstacle.width || pb < obstacle.y || pt > obstacle.y + obstacle.height) return false;
+            if (gameState.hasGoldenGlow) {
+                activateInvincibleFlash();
+                return false;
+            }
+            return true;
+        }
+
+        // ===================== 障碍物生成（含弹出） =====================
+        function createInitialObstacles() {
+            const spacing = getObstacleSpacingByStage(1);
+            for (let i = 0; i < 4; i++) {
+                createObstacleAtPosition(GAME_WIDTH + 300 + spacing * i, false, OBSTACLE_SPEED_TYPES.TYPE2, false);
+            }
+        }
+
+        function shouldCreateHardObstacle() {
+            let prob = gameState.hardObstacleBaseProbability;
+            if (gameState.currentStage === 1) prob = 0.05;
+            else prob = Math.min(0.3, 0.08 + (gameState.currentStage - 2) * 0.07);
+            if (gameState.hardObstacleCount >= gameState.maxHardObstaclesInRow) return false;
+            if (gameState.lastHardObstacleX > 0 && GAME_WIDTH - gameState.lastHardObstacleX < gameState.minDistanceBetweenHardObstacles) return false;
+            return Math.random() < prob;
+        }
+
+        function createObstacleAtPosition(startX, isClosePair, speedType, forceHard) {
+            if (gameState.obstacleCount >= gameState.maxObstaclesOnScreen) return null;
+            const totalGap = GAME_HEIGHT - CEILING_HEIGHT - GROUND_HEIGHT;
+            const baseH = getObstacleBaseHeightByStage(gameState.currentStage);
+            gameState.wavePhase += gameState.waveFrequency;
+            const sType = speedType || (Math.random() < 0.4 ? OBSTACLE_SPEED_TYPES.TYPE1 : OBSTACLE_SPEED_TYPES.TYPE2);
+            const width = 50 + Math.random() * 50;
+            if (!isPositionSafe(startX, gameState.lastObstacleLayout, forceHard || shouldCreateHardObstacle())) return null;
+            if (gameState.obstacles.length && startX - gameState.obstacles[gameState.obstacles.length-1].x < width * 1.5) return null;
+            let layout;
+            const rnd = Math.random();
+            if (rnd < 0.4) layout = OBSTACLE_LAYOUTS.TOP_PASSABLE;
+            else if (rnd < 0.8) layout = OBSTACLE_LAYOUTS.BOTTOM_PASSABLE;
+            else layout = OBSTACLE_LAYOUTS.MIDDLE_PASSABLE;
+            const isHard = forceHard || shouldCreateHardObstacle();
+            if (isHard) { gameState.hardObstacleCount++; gameState.lastHardObstacleX = startX; }
+            else gameState.hardObstacleCount = 0;
+            let topH, bottomH;
+            if (layout === OBSTACLE_LAYOUTS.TOP_PASSABLE) { topH = Math.max(20, baseH * 0.15); bottomH = Math.max(20, baseH * 1.3 - topH); }
+            else if (layout === OBSTACLE_LAYOUTS.BOTTOM_PASSABLE) { bottomH = Math.max(20, baseH * 0.15); topH = Math.max(20, baseH * 1.3 - bottomH); }
+            else { topH = Math.max(20, baseH * 0.4); bottomH = Math.max(20, baseH * 0.4); }
+            const minGap = isHard ? PLAYER_BALL_SIZE * 3 : PLAYER_BALL_SIZE * 4;
+            const maxGap = isHard ? PLAYER_BALL_SIZE * 5 : PLAYER_BALL_SIZE * 7;
+            const targetGap = minGap + Math.random() * (maxGap - minGap);
+            const totalObstacleH = totalGap - targetGap;
+            const scale = totalObstacleH / (topH + bottomH);
+            topH *= scale; bottomH *= scale;
+            const colors = isHard ? ["#ff00ff", "#ff66ff"] : layout === OBSTACLE_LAYOUTS.TOP_PASSABLE ? ["#ff4a4a","#ff9900"] : layout === OBSTACLE_LAYOUTS.BOTTOM_PASSABLE ? ["#4a4aff","#00aaff"] : ["#4aff4a","#aaff4a"];
+            const obsType = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)];
+            const topY = CEILING_HEIGHT;
+            const bottomY = GAME_HEIGHT - GROUND_HEIGHT - bottomH;
+            const canEject = gameState.currentStage >= gameState.EJECT_MIN_STAGE && (totalGap - topH - bottomH) >= gameState.EJECT_THRESHOLD_GAP;
+            let ejectSide = null;
+            if (canEject && Math.random() < 0.6) {
+                ejectSide = Math.random() < 0.5 ? 'top' : 'bottom';
+            }
+            const topEl = createObstacleElement(width, topH, colors, obsType.shape, sType, isHard);
+            const topInfo = {
+                element: topEl, x: startX, y: ejectSide === 'top' ? -topH : topY,
+                width, height: topH, speedType: sType, isHardObstacle: isHard,
+                layoutType: layout, isEjecting: ejectSide === 'top',
+                ejectSpeed: 0, targetY: topY
+            };
+            gameScreen.appendChild(topEl);
+            topEl.style.left = `${startX}px`;
+            topEl.style.top = `${topInfo.y}px`;
+            const bottomEl = createObstacleElement(width, bottomH, colors, obsType.shape, sType, isHard);
+            const bottomInfo = {
+                element: bottomEl, x: startX, y: ejectSide === 'bottom' ? GAME_HEIGHT : bottomY,
+                width, height: bottomH, speedType: sType, isHardObstacle: isHard,
+                layoutType: layout, isEjecting: ejectSide === 'bottom',
+                ejectSpeed: 0, targetY: bottomY
+            };
+            gameScreen.appendChild(bottomEl);
+            bottomEl.style.left = `${startX}px`;
+            bottomEl.style.top = `${bottomInfo.y}px`;
+            if (topInfo.isEjecting) {
+                topInfo.ejectSpeed = Math.abs(topInfo.targetY - topInfo.y) / (gameState.EJECT_DURATION / 1000);
+            }
+            if (bottomInfo.isEjecting) {
+                bottomInfo.ejectSpeed = Math.abs(bottomInfo.targetY - bottomInfo.y) / (gameState.EJECT_DURATION / 1000);
+            }
+            gameState.obstacles.push(topInfo, bottomInfo);
+            gameState.obstacleCount += 2;
+            gameState.lastObstacleLayout = layout;
+            gameState.obstaclePositions.push({ x: startX, width, layout, isHard });
+            if (gameState.obstaclePositions.length > 5) gameState.obstaclePositions.shift();
+            if (layout === OBSTACLE_LAYOUTS.TOP_PASSABLE) gameState.obstacleTypes.topPassable++;
+            else if (layout === OBSTACLE_LAYOUTS.BOTTOM_PASSABLE) gameState.obstacleTypes.bottomPassable++;
+            else gameState.obstacleTypes.middlePassable++;
+            if (sType === OBSTACLE_SPEED_TYPES.TYPE1) gameState.obstacleTypes.type1++;
+            else gameState.obstacleTypes.type2++;
+            return [topInfo, bottomInfo];
+        }
+
+        function createObstacleElement(w, h, colors, shape, sType, isHard) {
+            const el = document.createElement('div');
+            el.className = 'obstacle';
+            if (isHard) { el.style.border = '2px solid #ff00ff'; el.style.boxShadow = '0 0 15px #ff00ff'; }
+            else if (sType === OBSTACLE_SPEED_TYPES.TYPE1) el.classList.add('type1-obstacle');
+            else el.classList.add('type2-obstacle');
+            el.style.background = `linear-gradient(${Math.random()*360}deg, ${colors[0]}, ${colors[1]})`;
+            el.style.width = `${w}px`; el.style.height = `${h}px`;
+            if (shape === 'triangle') el.style.clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)';
+            else if (shape === 'circle') el.style.borderRadius = '50%';
+            else if (shape === 'hexagon') el.style.clipPath = 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)';
+            return el;
+        }
+
+        // ===================== 游戏流程 =====================
+        function initGame() {
+            // 在真正初始化之前，记录上一局的数据（如果有的话）
+            // 注意：第一次加载时 gameState 可能还没有有效数据，所以 recordCurrentGameSession 会判断
+            recordCurrentGameSession();
+
+            gameState.isPlaying = false; gameState.isGameOver = false; gameState.isPaused = false;
+            gameState.score = 0; gameState.playerY = PLAYER_GROUND_Y; gameState.playerVelocity = 0;
+            gameState.obstacles = []; gameState.powerups = [];
+            gameState.lastObstaclePairTime = 0;
+            gameState.obstacleTypes = { topPassable:0, bottomPassable:0, middlePassable:0, type1:0, type2:0 };
+            gameState.isSpacePressed = false; gameState.isFKeyPressed = false;
+            gameState.deathCount = 0; gameState.isReviving = false; gameState.reviveCount = 0;
+            gameState.isInvincible = false; gameState.invincibleTimer = 0;
+            gameState.hasGoldenGlow = false; gameState.goldenGlowTimer = 0;
+            gameState.isBig = false; gameState.bigTimer = 0;
+            removeGoldenGlowEffect(); removeInvincibleFlashEffect(); removeGrowEffect();
+            gameState.lastPowerupTime = 0;
+            gameState.invinciblePowerupsCollected = 0; gameState.growPowerupsCollected = 0;
+            gameState.obstacleCount = 0; gameState.wavePhase = 0;
+            gameState.hardObstacleCount = 0; gameState.lastHardObstacleX = -1000;
+            gameState.progress = 0; gameState.backgroundPosition = 0;
+            gameState.isBackgroundInitialized = false;
+            gameState.lastObstacleLayout = null;
+            gameState.currentStage = 1; gameState.maxStageReached = 1;
+            gameState.baseGameSpeed = 2.0; gameState.currentGameSpeed = 2.0;
+            gameState.currentObstacleInterval = 1200; gameState.currentObstacleSpacing = 250;
+            gameState.lastUpdateTime = 0; gameState.obstaclePositions = []; gameState.lastObstacleX = 0;
+            loadSkinFromStorage();
+            loadHistoryData(); // 加载历史数据（包括最高分）
+            initializeBackground();
+            scoreElement.textContent = '0'; stageElement.textContent = '1';
+            startScreen.style.display = 'flex'; gameOverScreen.style.display = 'none'; historyScreen.style.display = 'none';
+            powerupInfoElement.style.display = 'none'; growInfoElement.style.display = 'none';
+            recordMsgElement.style.display = 'none';
+            player.style.top = `${PLAYER_GROUND_Y}px`; player.style.left = `${PLAYER_X}px`;
+            player.style.width = `${PLAYER_SIZE}px`; player.style.height = `${PLAYER_SIZE}px`;
+            player.style.animation = ''; player.style.opacity = '1';
+            applySkinToPlayer();
+            document.querySelectorAll('.obstacle').forEach(o => o.remove());
+            document.querySelectorAll('.powerup').forEach(p => p.remove());
+            createInitialObstacles();
+            initSkinSelector();
+        }
+
+        function calculateCurrentStage(score) { return Math.min(Math.floor(score / SCORE_PER_STAGE) + 1, TOTAL_STAGES); }
+
+        function updateDynamicParameters(now) {
+            if (gameState.lastUpdateTime === 0) { gameState.lastUpdateTime = now; return; }
+            if (now - gameState.lastUpdateTime >= 1000) {
+                gameState.currentGameSpeed += gameState.currentStage === 1 ? gameState.speedIncreasePerSecond : gameState.stage2PlusSpeedIncrease;
+                gameState.lastUpdateTime = now;
+                gameState.waveAmplitude = 0.5 + (gameState.currentGameSpeed - 2.0) * 0.1;
+                if (gameState.currentGameSpeed > 4.5) gameState.currentGameSpeed = 4.5;
+            }
+            gameState.currentObstacleSpacing = getObstacleSpacingByStage(gameState.currentStage);
+            gameState.currentObstacleInterval = getObstacleIntervalByStage(gameState.currentStage);
+            const newStage = calculateCurrentStage(gameState.score);
+            if (newStage > gameState.currentStage) {
+                gameState.currentStage = newStage;
+                gameState.maxStageReached = Math.max(gameState.maxStageReached, newStage);
+                stageElement.textContent = newStage;
+            }
+        }
+
+        function startGame() {
+            if (gameState.isGameOver) return;
+            gameState.isPlaying = true; gameState.isPaused = false;
+            startScreen.style.display = 'none'; gameOverScreen.style.display = 'none'; historyScreen.style.display = 'none';
+            const now = Date.now();
+            gameState.lastObstaclePairTime = now;
+            gameState.lastUpdateTime = now;
+            gameState.lastPowerupTime = now - 5000;
+            gameLoop();
+        }
+
+        function jump() {
+            if (gameState.isGameOver) return;
+            if (!gameState.isPlaying) { startGame(); return; }
+            if (gameState.isPaused) return;
+            gameState.playerVelocity = gameState.jumpForce;
+            player.style.transform = 'scale(0.9)';
+            setTimeout(() => { player.style.transform = 'scale(1)'; }, 100);
+        }
+
+        function createPairedObstacles() {
+            if (gameState.obstacleCount + 2 > gameState.maxObstaclesOnScreen) return null;
+            const sType = Math.random() < 0.4 ? OBSTACLE_SPEED_TYPES.TYPE1 : OBSTACLE_SPEED_TYPES.TYPE2;
+            return createObstacleAtPosition(GAME_WIDTH, false, sType);
+        }
+
+        function createObstacles() {
+            if (gameState.isGameOver || gameState.isPaused) return;
+            if (Date.now() - gameState.lastObstaclePairTime > gameState.currentObstacleInterval) {
+                const pair = createPairedObstacles();
+                if (pair) gameState.obstacles.push(...pair);
+                gameState.lastObstaclePairTime = Date.now();
+            }
+            spawnPowerup();
+        }
+
+        function updateObstacles() {
+            for (let i = gameState.obstacles.length - 1; i >= 0; i--) {
+                const obs = gameState.obstacles[i];
+                const spd = obs.speedType === OBSTACLE_SPEED_TYPES.TYPE1 ? getType1Speed() : getType2Speed();
+                obs.x -= spd;
+                obs.element.style.left = `${obs.x}px`;
+                if (obs.isEjecting) {
+                    const now = performance.now();
+                    if (!obs._lastEjectTime) obs._lastEjectTime = now;
+                    const dt = (now - obs._lastEjectTime) / 1000;
+                    obs._lastEjectTime = now;
+                    const move = obs.ejectSpeed * dt;
+                    if (obs.targetY > obs.y) obs.y = Math.min(obs.y + move, obs.targetY);
+                    else obs.y = Math.max(obs.y - move, obs.targetY);
+                    obs.element.style.top = `${obs.y}px`;
+                    if (obs.y === obs.targetY) obs.isEjecting = false;
+                }
+                if (obs.x + obs.width < 0) {
+                    obs.element.remove();
+                    gameState.obstacles.splice(i, 1);
+                    gameState.obstacleCount--;
+                    gameState.score++;
+                    scoreElement.textContent = gameState.score;
+                    if (gameState.obstaclePositions.length) gameState.obstaclePositions.shift();
+                    continue;
+                }
+                if (!obs.isEjecting || (obs.y > CEILING_HEIGHT && obs.y + obs.height < GAME_HEIGHT - GROUND_HEIGHT)) {
+                    if (checkCollision(obs) && !gameState.hasGoldenGlow && !gameState.isInvincible) {
+                        gameOver();
+                        return;
+                    }
+                }
+            }
+        }
+
+        function gameOver() {
+            if (gameState.isGameOver) return;
+            gameState.isPlaying = false; gameState.isGameOver = true; gameState.isPaused = true;
+            gameState.deathCount++;
+            removeGoldenGlow(); removeInvincibleFlash(); removeGrow();
+            player.style.background = 'linear-gradient(45deg, #ff4a4a, #ff9900)';
+            player.style.boxShadow = '0 0 25px #ff4a4a';
+            player.style.backgroundImage = 'none'; player.style.animation = '';
+            finalScoreElement.textContent = gameState.score;
+            finalStageElement.textContent = gameState.maxStageReached;
+            powerupsCollectedElement.textContent = gameState.invinciblePowerupsCollected;
+            growPowerupsCollectedElement.textContent = gameState.growPowerupsCollected;
+            reviveCountDisplay.textContent = gameState.reviveCount;
+
+            // 检查是否打破记录（基于之前保存的最高分）
+            if (gameState.score > gameState.bestScore) {
+                recordMsgElement.style.display = 'block';
+            } else {
+                recordMsgElement.style.display = 'none';
+            }
+            gameOverScreen.style.display = 'flex';
+            historyScreen.style.display = 'none';
+            startScreen.style.display = 'none';
+        }
+
+        function revivePlayer() {
+            if (!gameState.isGameOver) return;
+            gameState.isGameOver = false; gameState.isPlaying = true; gameState.isPaused = false;
+            gameState.isReviving = true; gameState.reviveCount++;
+            activateInvincibleFlash();
+            player.style.opacity = '1';
+            gameOverScreen.style.display = 'none';
+            gameLoop();
+        }
+
+        function gameLoop() {
+            if (!gameState.isPlaying || gameState.isGameOver || gameState.isPaused) return;
+            const now = Date.now();
+            updateDynamicParameters(now);
+            updatePowerupStates();
+            gameState.playerVelocity += gameState.gravity;
+            gameState.playerY += gameState.playerVelocity;
+            if (gameState.playerY < CEILING_HEIGHT) { gameState.playerY = CEILING_HEIGHT; gameState.playerVelocity = 0; }
+            if (gameState.playerY > PLAYER_GROUND_Y) { gameState.playerY = PLAYER_GROUND_Y; gameState.playerVelocity = 0; }
+            player.style.top = `${gameState.playerY}px`;
+            updateBackground();
+            createObstacles();
+            updateObstacles();
+            updatePowerups();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ===================== 事件绑定 =====================
+        document.addEventListener('keydown', e => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (!gameState.isSpacePressed && !gameState.isGameOver) {
+                    gameState.isSpacePressed = true;
+                    if (!gameState.isPlaying && startScreen.style.display !== 'none') {
+                        startGame();
+                    } else if (gameState.isPlaying) {
+                        jump();
+                    }
+                }
+            } else if (e.code === 'KeyR') {
+                // 按R键：记录当前局数据，然后重新开始
+                if (gameState.isGameOver || !gameState.isPlaying) {
+                    initGame(); // initGame 内部会调用 recordCurrentGameSession
+                } else if (gameState.isPlaying) {
+                    // 如果在游戏中按R，视为放弃本局，记录后重开
+                    gameState.isPlaying = false;
+                    gameState.isGameOver = true; // 手动标记以便记录
+                    initGame();
+                }
+            } else if (e.code === 'KeyF') {
+                e.preventDefault();
+                if (gameState.isGameOver && !gameState.isFKeyPressed) {
+                    gameState.isFKeyPressed = true;
+                    revivePlayer();
+                }
+            }
+        });
+
+        document.addEventListener('keyup', e => {
+            if (e.code === 'Space') gameState.isSpacePressed = false;
+            if (e.code === 'KeyF') gameState.isFKeyPressed = false;
+        });
+
+        startButton.addEventListener('click', e => {
+            e.preventDefault();
+            if (!gameState.isPlaying) startGame();
+        });
+
+        historyButton.addEventListener('click', e => {
+            e.preventDefault();
+            showHistoryPanel();
+        });
+
+        backButton.addEventListener('click', e => {
+            e.preventDefault();
+            hideHistoryPanel();
+        });
+
+        gameScreen.addEventListener('click', e => {
+            if (!gameState.isPlaying && startScreen.style.display !== 'none') {
+                if (!e.target.closest('.skin-selector') && !e.target.closest('.skin-option') && e.target !== historyButton) {
+                    startGame();
+                }
+            } else if (gameState.isPlaying && !gameState.isGameOver && !gameState.isPaused) {
+                jump();
+            }
+        });
+
+        reviveButton.addEventListener('click', e => {
+            e.preventDefault();
+            if (gameState.isGameOver) revivePlayer();
+        });
+
+        // 启动游戏
+        preloadBackgroundImage().then(() => {
+            loadHistoryData(); // 先加载一次
+            initGame(); // initGame 内部还会再 loadHistoryData 一次，但没关系
+        }).catch(() => {
+            loadHistoryData();
+            initGame();
+        });
+    </script>
+</body>
+</html>
